@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Button, Switch, StyleSheet } from "react-native";
+import { View, Text, Button, Switch, Platform, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import DateTimePicker, { Event } from "@react-native-community/datetimepicker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Notifications from "expo-notifications";
 import { Subscription } from "expo-modules-core";
 import { registerRootComponent } from "expo";
@@ -109,7 +109,7 @@ const App = () => {
             false: "hsl(210, 10%, 50%)",
           }}
           thumbColor={enabled ? "hsl(210, 80%, 85%)" : "hsl(210, 5%, 80%)"}
-          ios_backgroundColor="hsl(210, 80%, 70%)"
+          ios_backgroundColor="hsl(210, 10%, 50%)"
           onValueChange={toggleSwitch}
           value={enabled}
         />
@@ -157,14 +157,15 @@ const App = () => {
         />
       </View>
       {showTimePicker && (
-        <DateTimePicker
+        <DateTimePickerModal
           mode="time"
-          display="default"
-          value={time}
-          onChange={(event: Event, date?: Date) => {
-            setShowTimePicker(false); // hide time picker
-            setTime(date || time); // change time or cancel
+          date={time}
+          isVisible={showTimePicker}
+          onConfirm={(date) => {
+            setShowTimePicker(false);
+            setTime(date);
           }}
+          onCancel={() => setShowTimePicker(false)}
         />
       )}
       <StatusBar style="light" translucent={true} />
