@@ -1,5 +1,6 @@
 {
   "expo": {
+    "entryPoint": "./src/App.tsx",
     "name": "umbrella",
     "slug": "umbrella",
     "version": "1.0.0",
