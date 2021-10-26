@@ -10,14 +10,17 @@ const registerForPushNotificationsAsync = async () => {
     const { status: existingStatus } =
       await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
+
     if (existingStatus !== "granted") {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
+
     if (finalStatus !== "granted") {
       alert("Failed to get push token for push notification!");
       return;
     }
+
     token = (await Notifications.getExpoPushTokenAsync()).data;
     console.log(token);
   } else {
@@ -36,17 +39,12 @@ const registerForPushNotificationsAsync = async () => {
   return token;
 };
 
-// send push notification
+// send push notification at scheduled time
 const schedulePushNotification = async (time: Date) => {
-  // const trigger: Notifications.DailyTriggerInput = {
-  //   hour: time.getHours(),
-  //   minute: time.getMinutes(),
-  //   repeats: true,
-  // };
-
+  // set trigger to current time
   const trigger = new Date();
 
-  // add 24 hours if current time is past notification time
+  // set trigger to next day if current time is past notification time
   if (
     trigger.getHours() > time.getHours() ||
     (trigger.getHours() === time.getHours() &&
@@ -60,6 +58,7 @@ const schedulePushNotification = async (time: Date) => {
   trigger.setMinutes(time.getMinutes());
   trigger.setSeconds(0);
 
+  // schedule notification
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "Bring an umbrella today! ☂️️",

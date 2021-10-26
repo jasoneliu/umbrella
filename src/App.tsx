@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Button, Switch, Platform, StyleSheet } from "react-native";
+import { View, Text, Button, Switch, StyleSheet } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import DateTimePicker, { Event } from "@react-native-community/datetimepicker";
 import * as Notifications from "expo-notifications";
@@ -32,38 +32,40 @@ const App = () => {
   const [time, setTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // fetch current location (latitude and longitude)
+  // current location (latitude, longitude, name)
   const [location, setLocation] = useState<ILocation | undefined>(undefined);
-
-  // TODO: invalid location on init should say waiting...
   let locationText = "Waiting...";
   if (location) {
     locationText = location.name;
   }
 
-  // load stored data (app enabled, time of notification)
+  // get pop (probability of precipitation) for next 24 hours
+  const [umbrella, setUmbrella] = useState<boolean | undefined>(false);
+
+  // load stored data (app enabled, time of notification) on startup
   useEffect(() => {
-    async () => {
+    (async () => {
       const data = await getData();
       if (data) {
         setEnabled(data.enabled);
         setTime(new Date(data.time));
       }
-    };
+    })();
   }, []);
 
-  // update stored data
+  // update stored data on change
   useEffect(() => {
     const data: IStoredData = { enabled: enabled, time: time.getTime() };
     storeData(data);
   }, [enabled, time]);
 
+  // set location on startup
   useEffect(() => {
-    getLocation();
+    (async () => {
+      const location = await getLocation();
+      setLocation(location);
+    })();
   }, []);
-
-  // get pop (probability of precipitation) for next 24 hours
-  const [umbrella, setUmbrella] = useState<boolean | undefined>(false);
 
   // notifications
   const [expoPushToken, setExpoPushToken] = useState("");
