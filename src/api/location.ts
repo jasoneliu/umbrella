@@ -8,13 +8,24 @@ interface ILocation {
 }
 
 const getLocation = async (): Promise<ILocation | undefined> => {
-  const { status } = await Location.requestForegroundPermissionsAsync();
+  // request background location permission if missing
+  let { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== "granted") {
     return undefined;
   }
 
-  const lastKnownLocation = await Location.getLastKnownPositionAsync({});
-  if (!lastKnownLocation) {
+  // TODO: Add modal explaining how background permission is used
+
+  status = (await Location.requestBackgroundPermissionsAsync()).status;
+  if (status !== "granted") {
+    return undefined;
+  }
+
+  // get current location
+  const location = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.Low,
+  });
+  if (!location) {
     return undefined;
   }
 
@@ -22,23 +33,23 @@ const getLocation = async (): Promise<ILocation | undefined> => {
   try {
     const response = await fetch(
       "https://api.openweathermap.org/data/2.5/weather?lat=" +
-        lastKnownLocation.coords.latitude.toFixed(2) +
+        location.coords.latitude.toFixed(2) +
         "&lon=" +
-        lastKnownLocation.coords.longitude.toFixed(2) +
+        location.coords.longitude.toFixed(2) +
         "&appid=" +
         OPENWEATHERMAP_API_KEY
     );
     const data = await response.json();
     return {
-      latitude: lastKnownLocation.coords.latitude,
-      longitude: lastKnownLocation.coords.longitude,
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
       name: `${data.name}, ${data.sys.country}`,
     };
   } catch (error) {
     console.log(error);
     return {
-      latitude: lastKnownLocation.coords.latitude,
-      longitude: lastKnownLocation.coords.longitude,
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
       name: "",
     };
   }

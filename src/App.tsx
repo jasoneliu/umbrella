@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, Button, Switch, Platform, StyleSheet } from "react-native";
+import { View, Text, Button, Switch, StyleSheet } from "react-native";
+import { registerRootComponent } from "expo";
 import { StatusBar } from "expo-status-bar";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Notifications from "expo-notifications";
-import { Subscription } from "expo-modules-core";
-import { registerRootComponent } from "expo";
+// import { Subscription } from "expo-modules-core"; // expo 43, background location bug
+// https://github.com/expo/expo/issues/14774
+import { Subscription } from "@unimodules/core"; // expo 42
+import * as TaskManager from "expo-task-manager";
+import * as Location from "expo-location";
 import { IStoredData, storeData, getData } from "./api/asyncStorage";
 import { ILocation, getLocation } from "./api/location";
 import {
@@ -14,14 +18,30 @@ import {
 import getPop from "./api/rain";
 import getTime from "./api/time";
 
-// push notification settings
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
+const LOCATION_TASK = "background-location-task";
+
+TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  if (data) {
+    // @ts-ignore (expo doesn't provide a way to type the data object)
+    const { locations }: { locations: Location.LocationObject[] } = data;
+    const { latitude, longitude } = locations[0].coords;
+    // cancelAllScheduledNotificationsAsync()
+  }
 });
+
+const startLocationUpdatesAsync = async () => {
+  Location.startLocationUpdatesAsync(LOCATION_TASK, {
+    accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
+    timeInterval: 1000 * 60 * 5, // update every 5 minutes
+    distanceInterval: 1000, // kilometer
+    showsBackgroundLocationIndicator: false,
+  });
+};
 
 const App = () => {
   // disable/enable notifications
@@ -39,17 +59,26 @@ const App = () => {
     locationText = location.name;
   }
 
-  // get pop (probability of precipitation) for next 24 hours
+  const [locationUpdates, setLocationUpdates] = useState(false);
+
+  // whether an umbrella is needed for the day
   const [umbrella, setUmbrella] = useState<boolean | undefined>(false);
 
-  // load stored data (app enabled, time of notification) on startup
+  // initialize app on startup
   useEffect(() => {
+    // load stored data (app enabled, time of notification)
     (async () => {
       const data = await getData();
       if (data) {
         setEnabled(data.enabled);
         setTime(new Date(data.time));
       }
+    })();
+
+    // set location
+    (async () => {
+      const location = await getLocation();
+      setLocation(location);
     })();
   }, []);
 
@@ -59,44 +88,19 @@ const App = () => {
     storeData(data);
   }, [enabled, time]);
 
-  // set location on startup
-  useEffect(() => {
-    (async () => {
-      const location = await getLocation();
-      setLocation(location);
-    })();
-  }, []);
-
   // notifications
-  const [expoPushToken, setExpoPushToken] = useState("");
   const [notification, setNotification] =
     useState<Notifications.Notification>();
-  const subscriptionInit: Subscription = { remove: () => {} };
-  const notificationListener = useRef<Subscription>(subscriptionInit);
-  const responseListener = useRef<Subscription>(subscriptionInit);
+  const notificationListener = useRef<Subscription>();
 
   useEffect(() => {
-    async () => {
-      const token = await registerForPushNotificationsAsync();
-      token && setExpoPushToken(token);
-    };
-
-    notificationListener.current =
-      Notifications.addNotificationReceivedListener((notification) => {
-        setNotification(notification);
-      });
-
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        console.log(response);
-      });
-
-    return () => {
-      Notifications.removeNotificationSubscription(
-        notificationListener.current
-      );
-      Notifications.removeNotificationSubscription(responseListener.current);
-    };
+    (async () => {
+      await registerForPushNotificationsAsync();
+      notificationListener.current =
+        Notifications.addNotificationReceivedListener((notification) => {
+          setNotification(notification);
+        });
+    })();
   }, []);
 
   return (
@@ -153,6 +157,21 @@ const App = () => {
           title="Press to schedule a notification"
           onPress={async () => {
             await schedulePushNotification(time);
+          }}
+        />
+      </View>
+      <View>
+        <Button
+          title={"Location updates: " + (locationUpdates ? "On" : "Off")}
+          onPress={async () => {
+            const locationUpdates =
+              await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
+            if (locationUpdates) {
+              Location.stopLocationUpdatesAsync(LOCATION_TASK);
+            } else {
+              startLocationUpdatesAsync();
+            }
+            setLocationUpdates(!locationUpdates);
           }}
         />
       </View>

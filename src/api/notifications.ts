@@ -4,7 +4,14 @@ import Constants from "expo-constants";
 
 // get permission and push token for notificatons
 const registerForPushNotificationsAsync = async () => {
-  let token: string | undefined;
+  // push notification settings
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
 
   if (Constants.isDevice) {
     const { status: existingStatus } =
@@ -20,9 +27,6 @@ const registerForPushNotificationsAsync = async () => {
       alert("Failed to get push token for push notification!");
       return;
     }
-
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log(token);
   } else {
     alert("Must use physical device for Push Notifications");
   }
@@ -35,8 +39,6 @@ const registerForPushNotificationsAsync = async () => {
       lightColor: "#0000FF", // hsl causes "possible unhandled promise rejection"
     });
   }
-
-  return token;
 };
 
 // send push notification at scheduled time
