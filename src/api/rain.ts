@@ -34,7 +34,7 @@ const getRain = async (location: ILocation | undefined) => {
   }
 
   try {
-    // get 48 hour forecast
+    // get hourly forecast
     const response = await fetch(
       "https://api.openweathermap.org/data/2.5/onecall?lat=" +
         location.latitude.toFixed(2) +
@@ -58,7 +58,16 @@ const getRain = async (location: ILocation | undefined) => {
         rain[hourIdx] = 0;
       }
     }
-    return { pop: pop, rain: rain };
+
+    // determine if an umbrella is needed (pop > 50%)
+    let umbrella = false;
+    for (let hourIdx = 0; hourIdx < pop.length; hourIdx++) {
+      if (pop[hourIdx] >= 0.5) {
+        umbrella = true;
+      }
+    }
+
+    return { pop: pop, rain: rain, umbrella: umbrella };
   } catch (error) {
     console.log(error);
     return undefined;

@@ -23,7 +23,7 @@ const getLocation = async (): Promise<ILocation | undefined> => {
 
   // get current location
   const location = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Low,
+    accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
   });
   if (!location) {
     return undefined;

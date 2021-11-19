@@ -1,5 +1,5 @@
 // get current notification time
-const getTime = (time: Date) => {
+const getTime = (time: Date, includeMinutes: boolean) => {
   let hours = time.getHours();
   const minutes = time.getMinutes();
 
@@ -11,7 +11,12 @@ const getTime = (time: Date) => {
     hours -= 12;
   }
 
-  return `${hours}:${minutes < 10 ? "0" + minutes : minutes} ${period}`;
+  // return time (with or without minuts)
+  if (includeMinutes) {
+    return `${hours}:${minutes < 10 ? "0" + minutes : minutes} ${period}`;
+  } else {
+    return `${hours} ${period}`;
+  }
 };
 
 export default getTime;

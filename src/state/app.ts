@@ -3,13 +3,13 @@ import { ILocation } from "../api/location";
 
 interface IState {
   enabled: boolean;
-  time: number;
   location: ILocation | undefined;
+  time: number;
 }
 const initialState: IState = {
   enabled: false,
-  time: Date.now(),
   location: undefined,
+  time: Date.now(),
 };
 
 const appSlice = createSlice({
@@ -19,13 +19,14 @@ const appSlice = createSlice({
     setEnabled: (state, action) => {
       state.enabled = action.payload;
     },
-    setTime: (state, action) => {
-      state.time = action.payload;
-    },
     setLocation: (state, action) => {
       state.location = action.payload;
     },
+    setTime: (state, action) => {
+      state.time = action.payload;
+    },
   },
 });
-export const { setEnabled, setTime, setLocation } = appSlice.actions;
+
+export const { setEnabled, setLocation, setTime } = appSlice.actions;
 export default appSlice.reducer;

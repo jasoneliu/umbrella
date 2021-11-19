@@ -1,32 +1,38 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, Button, Switch, StyleSheet } from "react-native";
-import { StatusBar } from "expo-status-bar";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import * as Notifications from "expo-notifications";
-// import { Subscription } from "expo-modules-core"; // expo 43, background location bug
-// https://github.com/expo/expo/issues/14774
-import { Subscription } from "@unimodules/core"; // expo 42
-import * as TaskManager from "expo-task-manager";
 import * as Location from "expo-location";
-
+import * as Notifications from "expo-notifications";
+import { StatusBar } from "expo-status-bar";
+import * as TaskManager from "expo-task-manager";
 import Chart from "./Chart";
 
 import { useDispatch, useSelector } from "react-redux";
-import { RootState, AppDispatch } from "../state/store";
-import { setEnabled, setTime, setLocation } from "../state/app";
+import store, { RootState, AppDispatch } from "../state/store";
+import { setEnabled, setLocation, setTime } from "../state/app";
 
 import { IStoredData, storeData, getData } from "../api/asyncStorage";
-import { getLocation } from "../api/location";
+import { ILocation, getLocation } from "../api/location";
 import {
   registerForPushNotificationsAsync,
   schedulePushNotification,
 } from "../api/notifications";
-import getRain from "../api/rain";
 import getTime from "../api/time";
 
 const LOCATION_TASK = "background-location-task";
 
-TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
+// gets location in background
+const startLocationUpdatesAsync = async () => {
+  Location.startLocationUpdatesAsync(LOCATION_TASK, {
+    accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
+    timeInterval: 1000 * 15, // update every 10 minutes
+    distanceInterval: 1000, // update when position changes by more than a kilometer
+    showsBackgroundLocationIndicator: false,
+  });
+};
+
+// schedules notification on background location change
+TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.log(error);
     return;
@@ -34,51 +40,47 @@ TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
 
   if (data) {
     // @ts-ignore (expo doesn't provide a way to type the data object)
+    // get and store most recent location
     const { locations }: { locations: Location.LocationObject[] } = data;
     const { latitude, longitude } = locations[0].coords;
+    const newLocation: ILocation = {
+      latitude: latitude,
+      longitude: longitude,
+      name: "",
+    };
+    store.dispatch(setLocation(newLocation));
 
-    // set location
-
-    // if (enabled) {
-    //   schedulePushNotification(time)
-    // }
-    // cancelAllScheduledNotificationsAsync()
+    // schedule notification
+    const { enabled, time } = store.getState().app;
+    console.log("before push");
+    schedulePushNotification(enabled, newLocation, time);
   }
 });
-
-const startLocationUpdatesAsync = async () => {
-  Location.startLocationUpdatesAsync(LOCATION_TASK, {
-    accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
-    timeInterval: 1000 * 60 * 10, // update every 10 minutes
-    distanceInterval: 1000, // kilometer
-    showsBackgroundLocationIndicator: false,
-  });
-};
 
 const App = () => {
   const dispatch = useDispatch<AppDispatch>();
 
+  // current location (latitude, longitude, name)
+  const location = useSelector((state: RootState) => state.app.location);
+  let locationText = "Waiting for location...";
+  if (location) {
+    locationText = location.name;
+  }
+  const [locationUpdates, setLocationUpdates] = useState(false);
+
   // disable/enable notifications
   const enabled = useSelector((state: RootState) => state.app.enabled);
-  const toggleSwitch = () => {
-    dispatch(setEnabled(!enabled));
+  const toggleSwitch = async () => {
+    dispatch(setEnabled(!enabled)); // toggle
+    schedulePushNotification(enabled, location, time, setUmbrella);
   };
 
   // pick time of notification
   const time = useSelector((state: RootState) => state.app.time);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // current location (latitude, longitude, name)
-  const location = useSelector((state: RootState) => state.app.location);
-  let locationText = "Waiting...";
-  if (location) {
-    locationText = location.name;
-  }
-
-  const [locationUpdates, setLocationUpdates] = useState(false);
-
   // whether an umbrella is needed for the day
-  const [umbrella, setUmbrella] = useState<boolean | undefined>(false);
+  const [umbrella, setUmbrella] = useState<boolean>(false);
 
   // initialize app on startup
   useEffect(() => {
@@ -91,33 +93,38 @@ const App = () => {
       }
     })();
 
+    // request background location permission if missing
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        return undefined;
+      }
+      // TODO: Add modal explaining how background permission is used
+      status = (await Location.requestBackgroundPermissionsAsync()).status;
+      if (status !== "granted") {
+        return undefined;
+      }
+    })();
+
     // set location
     (async () => {
       const location = await getLocation();
       dispatch(setLocation(location));
     })();
+
+    // register for push notifications
+    registerForPushNotificationsAsync();
+
+    // schedule notifications
+    schedulePushNotification(enabled, location, time, setUmbrella);
   }, []);
 
-  // update stored data on change
+  // update stored data on change, schedule notification
   useEffect(() => {
     const data: IStoredData = { enabled: enabled, time: time };
     storeData(data);
+    schedulePushNotification(enabled, location, time, setUmbrella);
   }, [enabled, time]);
-
-  // notifications
-  const [notification, setNotification] =
-    useState<Notifications.Notification>();
-  const notificationListener = useRef<Subscription>();
-
-  useEffect(() => {
-    (async () => {
-      await registerForPushNotificationsAsync();
-      notificationListener.current =
-        Notifications.addNotificationReceivedListener((notification) => {
-          setNotification(notification);
-        });
-    })();
-  }, []);
 
   return (
     <View style={styles.container}>
@@ -138,7 +145,7 @@ const App = () => {
         <Text style={styles.text}>Time of notification: </Text>
         <Button
           onPress={() => setShowTimePicker(true)}
-          title={getTime(new Date(time))}
+          title={getTime(new Date(time), true)}
         />
       </View>
       <View>
@@ -152,31 +159,15 @@ const App = () => {
         />
       </View>
       <View>
-        <Button
-          onPress={async () => {
-            await getRain(location);
-            setUmbrella(false);
-          }}
-          title="Get weather"
-        />
         <Text style={styles.text}>
           {umbrella ? "Bring an umbrella!" : "No need to bring an umbrella."}
-        </Text>
-      </View>
-      <View style={{ alignItems: "center", justifyContent: "center" }}>
-        <Text style={styles.text}>
-          Title: {notification && notification.request.content.title}{" "}
-        </Text>
-        <Text style={styles.text}>
-          Body: {notification && notification.request.content.body}
         </Text>
       </View>
       <View>
         <Button
           title="Press to schedule a notification"
           onPress={async () => {
-            // const { pop } = await getRain(location);
-            await schedulePushNotification(new Date(time), []);
+            schedulePushNotification(enabled, location, time, setUmbrella);
           }}
         />
       </View>

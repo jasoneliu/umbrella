@@ -1,6 +1,9 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import getRain from "./rain";
+import getTime from "./time";
+import { ILocation } from "./location";
 
 // get permission and push token for notificatons
 const registerForPushNotificationsAsync = async () => {
@@ -42,18 +45,35 @@ const registerForPushNotificationsAsync = async () => {
 };
 
 // send push notification at scheduled time
-const schedulePushNotification = async (time: Date, pop: number[]) => {
+const scheduleNewPushNotification = async (time: Date, pop: number[]) => {
   // find time period with >50% pop
-  let begin = -1;
-  let end = -1;
+  let beginIdx = -1;
+  let endIdx = -1;
   for (let hourIdx = 0; hourIdx < pop.length; hourIdx++) {
     if (pop[hourIdx] >= 0.5) {
-      end = hourIdx;
-      if (begin == -1) {
-        begin = hourIdx;
+      endIdx = hourIdx;
+      if (beginIdx === -1) {
+        beginIdx = hourIdx;
       }
     }
   }
+
+  // no notification needed (pop < 50%)
+  if (beginIdx === -1 || endIdx === -1) {
+    return;
+  }
+
+  // get beginning and end times with >50% pop
+  let beginTime = new Date();
+  if (beginIdx === 0) {
+    beginTime.setHours(beginTime.getHours());
+  } else {
+    beginTime.setHours(beginTime.getHours() + beginIdx - 1);
+  }
+  let endTime = new Date();
+  endTime.setHours(endTime.getHours() + endIdx);
+  const beginTimeStr = getTime(beginTime, false);
+  const endTimeStr = getTime(endTime, false);
 
   // set trigger to current time
   const trigger = new Date();
@@ -76,10 +96,31 @@ const schedulePushNotification = async (time: Date, pop: number[]) => {
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "Bring an umbrella today! ☂️️",
-      body: "Greater than 50% rain from ",
+      body: `Greater than 50% chance of rain from ${beginTimeStr} to ${endTimeStr}`,
     },
     trigger: trigger,
   });
+};
+
+const schedulePushNotification = async (
+  enabled: boolean,
+  location: ILocation | undefined,
+  time: number,
+  setUmbrella?: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  // cancel previous notifications
+  Notifications.cancelAllScheduledNotificationsAsync();
+
+  // schedule notification
+  const rain = await getRain(location);
+  if (enabled && rain && rain.umbrella) {
+    scheduleNewPushNotification(new Date(time), rain.pop);
+  }
+
+  // set umbrella state
+  if (setUmbrella && rain) {
+    setUmbrella(rain.umbrella);
+  }
 };
 
 export { registerForPushNotificationsAsync, schedulePushNotification };
