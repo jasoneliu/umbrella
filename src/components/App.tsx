@@ -5,7 +5,9 @@ import * as Location from "expo-location";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as TaskManager from "expo-task-manager";
+
 import Chart from "./Chart";
+import NotificationIcon from "../components/NotificationIcon";
 
 import { useDispatch, useSelector } from "react-redux";
 import store, { RootState, AppDispatch } from "../state/store";
@@ -130,19 +132,7 @@ const App = () => {
 
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
-      <View>
-        <Text style={styles.text}>{enabled ? "Enabled" : "Disabled"}</Text>
-        <Switch
-          trackColor={{
-            true: "hsl(210, 80%, 70%)",
-            false: "hsl(210, 10%, 50%)",
-          }}
-          thumbColor={enabled ? "hsl(210, 80%, 85%)" : "hsl(210, 5%, 80%)"}
-          ios_backgroundColor="hsl(210, 10%, 50%)"
-          onValueChange={toggleSwitch}
-          value={enabled}
-        />
-      </View>
+      <NotificationIcon enabled={enabled} dispatch={dispatch} />
       <View>
         <Text style={styles.text}>Time of notification: </Text>
         <Button
