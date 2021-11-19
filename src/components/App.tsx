@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Button, Switch, StyleSheet } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Button, Switch, StyleSheet, Text, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Location from "expo-location";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as TaskManager from "expo-task-manager";
 import Chart from "./Chart";
@@ -80,6 +81,9 @@ const App = () => {
   // rain data (probability of precipitation, rain volume, umbrella)
   const [rain, setRain] = useState<IRain | undefined>(undefined);
 
+  //
+  const [appIsReady, setAppIsReady] = useState(false);
+
   // initialize app on startup
   useEffect(() => {
     (async () => {
@@ -95,10 +99,14 @@ const App = () => {
       dispatch(setLocation(location));
 
       // register for push notifications
-      registerForPushNotificationsAsync();
+      await registerForPushNotificationsAsync();
 
       // schedule notifications
-      schedulePushNotification(enabled, location, time, setRain);
+      await schedulePushNotification(enabled, location, time, setRain);
+
+      // keep splash screen visible until app is ready to render
+      await SplashScreen.preventAutoHideAsync();
+      setAppIsReady(true);
     })();
   }, []);
 
@@ -109,8 +117,19 @@ const App = () => {
     schedulePushNotification(enabled, location, time, setRain);
   }, [enabled, time]);
 
+  // hide the splash screen once the root view has performed layout
+  const onLayoutRootView = useCallback(async () => {
+    if (appIsReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  if (!appIsReady) {
+    return null;
+  }
+
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onLayoutRootView}>
       <View>
         <Text style={styles.text}>{enabled ? "Enabled" : "Disabled"}</Text>
         <Switch
