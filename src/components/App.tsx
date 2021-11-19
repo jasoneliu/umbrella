@@ -28,7 +28,7 @@ const LOCATION_TASK = "background-location-task";
 const startLocationUpdatesAsync = async () => {
   Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
-    timeInterval: 1000 * 15, // update every 10 minutes
+    timeInterval: 1000 * 60 * 10, // update every 10 minutes
     distanceInterval: 1000, // update when position changes by more than a kilometer
     showsBackgroundLocationIndicator: false,
   });
@@ -96,9 +96,12 @@ const App = () => {
         dispatch(setTime(data.time));
       }
 
-      // set location
+      // get location permissions and set location
       const location = await getLocation();
       dispatch(setLocation(location));
+
+      // get location in background
+      await startLocationUpdatesAsync();
 
       // register for push notifications
       await registerForPushNotificationsAsync();
