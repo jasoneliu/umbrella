@@ -8,4 +8,5 @@ This app sends you a notification whenever you'll need an umbrella for the day.
 
 - React Native
 - Expo
+- Redux / Redux Toolkit
 - OpenWeatherMap API
