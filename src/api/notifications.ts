@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
-import getRain from "./rain";
+import { IRain, getRain } from "./rain";
 import getTime from "./time";
 import { ILocation } from "./location";
 
@@ -106,7 +106,7 @@ const schedulePushNotification = async (
   enabled: boolean,
   location: ILocation | undefined,
   time: number,
-  setUmbrella?: React.Dispatch<React.SetStateAction<boolean>>
+  setRain?: React.Dispatch<React.SetStateAction<IRain | undefined>>
 ) => {
   // cancel previous notifications
   Notifications.cancelAllScheduledNotificationsAsync();
@@ -117,9 +117,9 @@ const schedulePushNotification = async (
     scheduleNewPushNotification(new Date(time), rain.pop);
   }
 
-  // set umbrella state
-  if (setUmbrella && rain) {
-    setUmbrella(rain.umbrella);
+  // set rain state (probability of precipitation, rain volume, umbrella)
+  if (setRain) {
+    setRain(rain);
   }
 };
 

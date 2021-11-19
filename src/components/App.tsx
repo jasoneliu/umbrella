@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { View, Text, Button, Switch, StyleSheet } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Location from "expo-location";
-import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import * as TaskManager from "expo-task-manager";
 import Chart from "./Chart";
@@ -17,6 +16,7 @@ import {
   registerForPushNotificationsAsync,
   schedulePushNotification,
 } from "../api/notifications";
+import { IRain } from "../api/rain";
 import getTime from "../api/time";
 
 const LOCATION_TASK = "background-location-task";
@@ -52,7 +52,6 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
 
     // schedule notification
     const { enabled, time } = store.getState().app;
-    console.log("before push");
     schedulePushNotification(enabled, newLocation, time);
   }
 });
@@ -66,64 +65,48 @@ const App = () => {
   if (location) {
     locationText = location.name;
   }
-  const [locationUpdates, setLocationUpdates] = useState(false);
 
   // disable/enable notifications
   const enabled = useSelector((state: RootState) => state.app.enabled);
   const toggleSwitch = async () => {
     dispatch(setEnabled(!enabled)); // toggle
-    schedulePushNotification(enabled, location, time, setUmbrella);
+    schedulePushNotification(enabled, location, time, setRain);
   };
 
   // pick time of notification
   const time = useSelector((state: RootState) => state.app.time);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // whether an umbrella is needed for the day
-  const [umbrella, setUmbrella] = useState<boolean>(false);
+  // rain data (probability of precipitation, rain volume, umbrella)
+  const [rain, setRain] = useState<IRain | undefined>(undefined);
 
   // initialize app on startup
   useEffect(() => {
-    // load stored data (app enabled, time of notification)
     (async () => {
+      // load stored data (app enabled, time of notification)
       const data = await getData();
       if (data) {
         dispatch(setEnabled(data.enabled));
         dispatch(setTime(data.time));
       }
-    })();
 
-    // request background location permission if missing
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        return undefined;
-      }
-      // TODO: Add modal explaining how background permission is used
-      status = (await Location.requestBackgroundPermissionsAsync()).status;
-      if (status !== "granted") {
-        return undefined;
-      }
-    })();
-
-    // set location
-    (async () => {
+      // set location
       const location = await getLocation();
       dispatch(setLocation(location));
+
+      // register for push notifications
+      registerForPushNotificationsAsync();
+
+      // schedule notifications
+      schedulePushNotification(enabled, location, time, setRain);
     })();
-
-    // register for push notifications
-    registerForPushNotificationsAsync();
-
-    // schedule notifications
-    schedulePushNotification(enabled, location, time, setUmbrella);
   }, []);
 
   // update stored data on change, schedule notification
   useEffect(() => {
     const data: IStoredData = { enabled: enabled, time: time };
     storeData(data);
-    schedulePushNotification(enabled, location, time, setUmbrella);
+    schedulePushNotification(enabled, location, time, setRain);
   }, [enabled, time]);
 
   return (
@@ -160,31 +143,12 @@ const App = () => {
       </View>
       <View>
         <Text style={styles.text}>
-          {umbrella ? "Bring an umbrella!" : "No need to bring an umbrella."}
+          {rain
+            ? rain.umbrella
+              ? "Bring an umbrella today!"
+              : "No umbrella needed today."
+            : "Sorry, couldn't get a rain forecast."}
         </Text>
-      </View>
-      <View>
-        <Button
-          title="Press to schedule a notification"
-          onPress={async () => {
-            schedulePushNotification(enabled, location, time, setUmbrella);
-          }}
-        />
-      </View>
-      <View>
-        <Button
-          title={"Location updates: " + (locationUpdates ? "On" : "Off")}
-          onPress={async () => {
-            const locationUpdates =
-              await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
-            if (locationUpdates) {
-              Location.stopLocationUpdatesAsync(LOCATION_TASK);
-            } else {
-              startLocationUpdatesAsync();
-            }
-            setLocationUpdates(!locationUpdates);
-          }}
-        />
       </View>
       {showTimePicker && (
         <DateTimePickerModal

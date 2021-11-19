@@ -27,8 +27,16 @@ interface IWeather {
   wind_speed: number;
 }
 
+interface IRain {
+  pop: number[];
+  rain: number[];
+  umbrella: boolean;
+}
+
 // get probability of precipitation and rain volume for the next 12 hours
-const getRain = async (location: ILocation | undefined) => {
+const getRain = async (
+  location: ILocation | undefined
+): Promise<IRain | undefined> => {
   if (!location) {
     return undefined;
   }
@@ -74,4 +82,4 @@ const getRain = async (location: ILocation | undefined) => {
   }
 };
 
-export default getRain;
+export { IRain, getRain };
