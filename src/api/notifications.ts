@@ -36,13 +36,25 @@ const registerForPushNotificationsAsync = async () => {
       name: "default",
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#0000FF", // hsl causes "possible unhandled promise rejection"
+      lightColor: "blue",
     });
   }
 };
 
 // send push notification at scheduled time
-const schedulePushNotification = async (time: Date) => {
+const schedulePushNotification = async (time: Date, pop: number[]) => {
+  // find time period with >50% pop
+  let begin = -1;
+  let end = -1;
+  for (let hourIdx = 0; hourIdx < pop.length; hourIdx++) {
+    if (pop[hourIdx] >= 0.5) {
+      end = hourIdx;
+      if (begin == -1) {
+        begin = hourIdx;
+      }
+    }
+  }
+
   // set trigger to current time
   const trigger = new Date();
 
@@ -64,7 +76,7 @@ const schedulePushNotification = async (time: Date) => {
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "Bring an umbrella today! ☂️️",
-      body: "There is a 25% of rain at 1PM",
+      body: "Greater than 50% rain from ",
     },
     trigger: trigger,
   });

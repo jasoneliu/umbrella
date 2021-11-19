@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, Button, Switch, StyleSheet } from "react-native";
-import { registerRootComponent } from "expo";
 import { StatusBar } from "expo-status-bar";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Notifications from "expo-notifications";
@@ -9,14 +8,21 @@ import * as Notifications from "expo-notifications";
 import { Subscription } from "@unimodules/core"; // expo 42
 import * as TaskManager from "expo-task-manager";
 import * as Location from "expo-location";
-import { IStoredData, storeData, getData } from "./api/asyncStorage";
-import { ILocation, getLocation } from "./api/location";
+
+import Chart from "./Chart";
+
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../state/store";
+import { setEnabled, setTime, setLocation } from "../state/app";
+
+import { IStoredData, storeData, getData } from "../api/asyncStorage";
+import { getLocation } from "../api/location";
 import {
   registerForPushNotificationsAsync,
   schedulePushNotification,
-} from "./api/notifications";
-import getPop from "./api/rain";
-import getTime from "./api/time";
+} from "../api/notifications";
+import getRain from "../api/rain";
+import getTime from "../api/time";
 
 const LOCATION_TASK = "background-location-task";
 
@@ -30,6 +36,12 @@ TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
     // @ts-ignore (expo doesn't provide a way to type the data object)
     const { locations }: { locations: Location.LocationObject[] } = data;
     const { latitude, longitude } = locations[0].coords;
+
+    // set location
+
+    // if (enabled) {
+    //   schedulePushNotification(time)
+    // }
     // cancelAllScheduledNotificationsAsync()
   }
 });
@@ -37,23 +49,27 @@ TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
 const startLocationUpdatesAsync = async () => {
   Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
-    timeInterval: 1000 * 60 * 5, // update every 5 minutes
+    timeInterval: 1000 * 60 * 10, // update every 10 minutes
     distanceInterval: 1000, // kilometer
     showsBackgroundLocationIndicator: false,
   });
 };
 
 const App = () => {
+  const dispatch = useDispatch<AppDispatch>();
+
   // disable/enable notifications
-  const [enabled, setEnabled] = useState(false);
-  const toggleSwitch = () => setEnabled((previousState) => !previousState);
+  const enabled = useSelector((state: RootState) => state.app.enabled);
+  const toggleSwitch = () => {
+    dispatch(setEnabled(!enabled));
+  };
 
   // pick time of notification
-  const [time, setTime] = useState(new Date());
+  const time = useSelector((state: RootState) => state.app.time);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   // current location (latitude, longitude, name)
-  const [location, setLocation] = useState<ILocation | undefined>(undefined);
+  const location = useSelector((state: RootState) => state.app.location);
   let locationText = "Waiting...";
   if (location) {
     locationText = location.name;
@@ -70,21 +86,21 @@ const App = () => {
     (async () => {
       const data = await getData();
       if (data) {
-        setEnabled(data.enabled);
-        setTime(new Date(data.time));
+        dispatch(setEnabled(data.enabled));
+        dispatch(setTime(data.time));
       }
     })();
 
     // set location
     (async () => {
       const location = await getLocation();
-      setLocation(location);
+      dispatch(setLocation(location));
     })();
   }, []);
 
   // update stored data on change
   useEffect(() => {
-    const data: IStoredData = { enabled: enabled, time: time.getTime() };
+    const data: IStoredData = { enabled: enabled, time: time };
     storeData(data);
   }, [enabled, time]);
 
@@ -120,14 +136,17 @@ const App = () => {
       </View>
       <View>
         <Text style={styles.text}>Time of notification: </Text>
-        <Button onPress={() => setShowTimePicker(true)} title={getTime(time)} />
+        <Button
+          onPress={() => setShowTimePicker(true)}
+          title={getTime(new Date(time))}
+        />
       </View>
       <View>
         <Text style={styles.text}>Location: {locationText}</Text>
         <Button
           onPress={async () => {
             const location = await getLocation();
-            setLocation(location);
+            dispatch(setLocation(location));
           }}
           title="Refresh location"
         />
@@ -135,8 +154,8 @@ const App = () => {
       <View>
         <Button
           onPress={async () => {
-            const pop = await getPop(location);
-            setUmbrella(pop);
+            await getRain(location);
+            setUmbrella(false);
           }}
           title="Get weather"
         />
@@ -156,7 +175,8 @@ const App = () => {
         <Button
           title="Press to schedule a notification"
           onPress={async () => {
-            await schedulePushNotification(time);
+            // const { pop } = await getRain(location);
+            await schedulePushNotification(new Date(time), []);
           }}
         />
       </View>
@@ -178,11 +198,11 @@ const App = () => {
       {showTimePicker && (
         <DateTimePickerModal
           mode="time"
-          date={time}
+          date={new Date(time)}
           isVisible={showTimePicker}
           onConfirm={(date) => {
             setShowTimePicker(false);
-            setTime(date);
+            dispatch(setTime(date.getTime()));
           }}
           onCancel={() => setShowTimePicker(false)}
         />
@@ -205,4 +225,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default registerRootComponent(App);
+export default App;
