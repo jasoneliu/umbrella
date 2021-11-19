@@ -9,7 +9,7 @@ interface IState {
 const initialState: IState = {
   enabled: false,
   location: undefined,
-  time: Date.now(),
+  time: new Date().setHours(9, 0), // 9 AM
 };
 
 const appSlice = createSlice({

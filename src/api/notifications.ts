@@ -88,9 +88,7 @@ const scheduleNewPushNotification = async (time: Date, pop: number[]) => {
   }
 
   // set trigger time (hours and minutes)
-  trigger.setHours(time.getHours());
-  trigger.setMinutes(time.getMinutes());
-  trigger.setSeconds(0);
+  trigger.setHours(time.getHours(), time.getMinutes(), 0);
 
   // schedule notification
   await Notifications.scheduleNotificationAsync({
