@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Location from "expo-location";
 import * as SplashScreen from "expo-splash-screen";
@@ -7,6 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import * as TaskManager from "expo-task-manager";
 
 import Chart from "./Chart";
+import ClockIcon from "./icons/ClockIcon";
 import MapIcon from "./icons/MapIcon";
 import NotificationIcon from "./icons/NotificationIcon";
 import RefreshIcon from "./icons/RefreshIcon";
@@ -143,13 +144,13 @@ const App = () => {
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
       <NotificationIcon enabled={enabled} toggle={toggleEnabled} />
-      <View>
-        <Text style={styles.text}>Time of notification: </Text>
-        <Button
-          onPress={() => setShowTimePicker(true)}
-          title={getTime(new Date(time), true)}
-        />
-      </View>
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => setShowTimePicker(true)}
+      >
+        <ClockIcon />
+        <Text style={styles.text}>{getTime(new Date(time), true)}</Text>
+      </TouchableOpacity>
       <View style={styles.row}>
         <MapIcon />
         <Text style={styles.text}>{locationText}</Text>
