@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Button, Switch, StyleSheet, Text, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Location from "expo-location";
 import * as SplashScreen from "expo-splash-screen";
@@ -7,7 +7,9 @@ import { StatusBar } from "expo-status-bar";
 import * as TaskManager from "expo-task-manager";
 
 import Chart from "./Chart";
-import NotificationIcon from "../components/NotificationIcon";
+import MapIcon from "./icons/MapIcon";
+import NotificationIcon from "./icons/NotificationIcon";
+import RefreshIcon from "./icons/RefreshIcon";
 
 import { useDispatch, useSelector } from "react-redux";
 import store, { RootState, AppDispatch } from "../state/store";
@@ -26,7 +28,7 @@ const LOCATION_TASK = "background-location-task";
 
 // gets location in background
 const startLocationUpdatesAsync = async () => {
-  Location.startLocationUpdatesAsync(LOCATION_TASK, {
+  await Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
     timeInterval: 1000 * 60 * 10, // update every 10 minutes
     distanceInterval: 1000, // update when position changes by more than a kilometer
@@ -35,7 +37,7 @@ const startLocationUpdatesAsync = async () => {
 };
 
 // schedules notification on background location change
-TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
+TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
   if (error) {
     console.log(error);
     return;
@@ -68,10 +70,14 @@ const App = () => {
   if (location) {
     locationText = location.name;
   }
+  const refreshLocation = async () => {
+    const location = await getLocation();
+    dispatch(setLocation(location));
+  };
 
   // disable/enable notifications
   const enabled = useSelector((state: RootState) => state.app.enabled);
-  const toggleSwitch = async () => {
+  const toggleEnabled = () => {
     dispatch(setEnabled(!enabled)); // toggle
     schedulePushNotification(enabled, location, time, setRain);
   };
@@ -83,7 +89,7 @@ const App = () => {
   // rain data (probability of precipitation, rain volume, umbrella)
   const [rain, setRain] = useState<IRain | undefined>(undefined);
 
-  //
+  // app is ready after initialization, used to hide splash screen
   const [appIsReady, setAppIsReady] = useState(false);
 
   // initialize app on startup
@@ -101,7 +107,8 @@ const App = () => {
       dispatch(setLocation(location));
 
       // get location in background
-      await startLocationUpdatesAsync();
+      // TODO: fix unhandled promise rejection
+      // await startLocationUpdatesAsync();
 
       // register for push notifications
       await registerForPushNotificationsAsync();
@@ -135,7 +142,7 @@ const App = () => {
 
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
-      <NotificationIcon enabled={enabled} dispatch={dispatch} />
+      <NotificationIcon enabled={enabled} toggle={toggleEnabled} />
       <View>
         <Text style={styles.text}>Time of notification: </Text>
         <Button
@@ -143,15 +150,10 @@ const App = () => {
           title={getTime(new Date(time), true)}
         />
       </View>
-      <View>
-        <Text style={styles.text}>Location: {locationText}</Text>
-        <Button
-          onPress={async () => {
-            const location = await getLocation();
-            dispatch(setLocation(location));
-          }}
-          title="Refresh location"
-        />
+      <View style={styles.row}>
+        <MapIcon />
+        <Text style={styles.text}>{locationText}</Text>
+        <RefreshIcon refresh={refreshLocation} />
       </View>
       <View>
         <Text style={styles.text}>
@@ -174,6 +176,7 @@ const App = () => {
           onCancel={() => setShowTimePicker(false)}
         />
       )}
+      {/* <Chart data={rain ? rain.rain : Array(12).fill(0)} /> */}
       <StatusBar style="light" translucent={true} />
     </View>
   );
@@ -183,6 +186,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "hsl(210, 10%, 15%)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  row: {
+    display: "flex",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },

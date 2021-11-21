@@ -1,21 +1,19 @@
 import React from "react";
-import { AppDispatch } from "../state/store";
-import { setEnabled } from "../state/app";
 import { MaterialIcons } from "@expo/vector-icons";
 
 const NotificationIcon = ({
   enabled,
-  dispatch,
+  toggle,
 }: {
   enabled: boolean;
-  dispatch: AppDispatch;
+  toggle: () => void;
 }) => {
   return (
     <MaterialIcons
       name={enabled ? "notifications-active" : "notifications-off"}
       size={42}
       color="white"
-      onPress={() => dispatch(setEnabled(!enabled))}
+      onPress={toggle}
     />
   );
 };
