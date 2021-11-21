@@ -1,4 +1,5 @@
 import React from "react";
+import { TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 const NotificationIcon = ({
@@ -9,12 +10,13 @@ const NotificationIcon = ({
   toggle: () => void;
 }) => {
   return (
-    <MaterialIcons
-      name={enabled ? "notifications-active" : "notifications-off"}
-      size={42}
-      color="white"
-      onPress={toggle}
-    />
+    <TouchableOpacity onPress={toggle}>
+      <MaterialIcons
+        name={enabled ? "notifications-active" : "notifications-off"}
+        size={42}
+        color="white"
+      />
+    </TouchableOpacity>
   );
 };
 

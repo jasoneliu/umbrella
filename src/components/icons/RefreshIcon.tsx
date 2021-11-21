@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Animated, Easing } from "react-native";
+import { Animated, Easing, TouchableOpacity } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 // refresh location
@@ -36,25 +36,24 @@ const RefreshIcon = ({ refresh }: { refresh: () => Promise<void> }) => {
   });
 
   return (
-    <Animated.View style={{ transform: [{ rotate: rotateAnimation }] }}>
-      <MaterialIcons
-        name="refresh"
-        size={36}
-        color={"white"}
-        onPress={async () => {
-          // do nothing if animation already running
-          if (animationRunning.current) {
-            return;
-          }
+    <TouchableOpacity
+      onPress={async () => {
+        // do nothing if animation already running
+        if (animationRunning.current) {
+          return;
+        }
 
-          // run animation until location is fetched
-          refreshing.current = true;
-          runAnimation();
-          await refresh();
-          refreshing.current = false;
-        }}
-      />
-    </Animated.View>
+        // run animation until location is fetched
+        refreshing.current = true;
+        runAnimation();
+        await refresh();
+        refreshing.current = false;
+      }}
+    >
+      <Animated.View style={{ transform: [{ rotate: rotateAnimation }] }}>
+        <MaterialIcons name="refresh" size={36} color={"white"} />
+      </Animated.View>
+    </TouchableOpacity>
   );
 };
 
