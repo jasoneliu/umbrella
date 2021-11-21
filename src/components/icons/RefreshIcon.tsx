@@ -1,25 +1,30 @@
 import React, { useState, useRef } from "react";
-import { Animated, Easing, View, Button } from "react-native";
+import { Animated, Easing } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 
 // refresh location
 const RefreshIcon = ({ refresh }: { refresh: () => Promise<void> }) => {
   const [rotation, setRotation] = useState(new Animated.Value(0));
   const animationRunning = useRef(false);
+  const refreshing = useRef(false);
 
   // run rotating animation
   const runAnimation = () => {
+    animationRunning.current = true;
     Animated.timing(rotation, {
       toValue: 1,
-      duration: 500,
-      easing: Easing.linear,
+      duration: 750,
+      easing: Easing.bezier(0.42, 0, 0.58, 1), // ease-in-out
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      console.log(animationRunning.current, finished);
-      rotation.setValue(0); // returns to 0deg
-      // keep running animation
-      if (animationRunning.current) {
+    }).start(async () => {
+      rotation.setValue(0); // return to 0deg
+      await new Promise((r) => setTimeout(r, 100)); // delay next rotation
+
+      // keep running animation if location is still being fetched
+      if (refreshing.current) {
         runAnimation();
+      } else {
+        animationRunning.current = false;
       }
     });
   };
@@ -43,10 +48,10 @@ const RefreshIcon = ({ refresh }: { refresh: () => Promise<void> }) => {
           }
 
           // run animation until location is fetched
-          animationRunning.current = true;
+          refreshing.current = true;
           runAnimation();
           await refresh();
-          animationRunning.current = false;
+          refreshing.current = false;
         }}
       />
     </Animated.View>
