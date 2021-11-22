@@ -26,9 +26,9 @@
     "react-native": "https://github.com/expo/react-native/archive/sdk-42.0.0.tar.gz",
     "react-native-dotenv": "^3.3.0",
     "react-native-modal-datetime-picker": "10.2.0",
-    "react-native-svg": "^7.0.3",
-    "react-native-svg-charts": "^5.4.0",
-    "react-redux": "^7.2.6"
+    "react-native-svg": "^12.1.1",
+    "react-redux": "^7.2.6",
+    "victory-native": "^36.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",

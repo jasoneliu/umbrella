@@ -177,7 +177,7 @@ const App = () => {
           onCancel={() => setShowTimePicker(false)}
         />
       )}
-      {/* <Chart data={rain ? rain.rain : Array(12).fill(0)} /> */}
+      <Chart data={rain ? rain.rain : Array(12).fill(0)} />
       <StatusBar style="light" translucent={true} />
     </View>
   );
