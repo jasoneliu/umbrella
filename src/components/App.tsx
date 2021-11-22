@@ -38,7 +38,7 @@ const startLocationUpdatesAsync = async () => {
 };
 
 // schedules notification on background location change
-TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
+TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   if (error) {
     console.log(error);
     return;
@@ -49,10 +49,11 @@ TaskManager.defineTask(LOCATION_TASK, ({ data, error }) => {
     // get and store most recent location
     const { locations }: { locations: Location.LocationObject[] } = data;
     const { latitude, longitude } = locations[0].coords;
+    const fetchedLocation = await getLocation();
     const newLocation: ILocation = {
       latitude: latitude,
       longitude: longitude,
-      name: "",
+      name: fetchedLocation ? fetchedLocation.name : "Unable to get location.",
     };
     store.dispatch(setLocation(newLocation));
 
@@ -79,8 +80,8 @@ const App = () => {
   // disable/enable notifications
   const enabled = useSelector((state: RootState) => state.app.enabled);
   const toggleEnabled = () => {
+    schedulePushNotification(!enabled, location, time, setRain);
     dispatch(setEnabled(!enabled)); // toggle
-    schedulePushNotification(enabled, location, time, setRain);
   };
 
   // pick time of notification
@@ -108,14 +109,22 @@ const App = () => {
       dispatch(setLocation(location));
 
       // get location in background
-      // TODO: fix unhandled promise rejection
-      // await startLocationUpdatesAsync();
+      if (data?.enabled) {
+        await startLocationUpdatesAsync();
+      }
 
       // register for push notifications
       await registerForPushNotificationsAsync();
 
       // schedule notifications
-      await schedulePushNotification(enabled, location, time, setRain);
+      if (data) {
+        await schedulePushNotification(
+          data.enabled,
+          location,
+          data.time,
+          setRain
+        );
+      }
 
       // keep splash screen visible until app is ready to render
       await SplashScreen.preventAutoHideAsync();
@@ -123,12 +132,30 @@ const App = () => {
     })();
   }, []);
 
-  // update stored data on change, schedule notification
+  // update stored data on change, start/stop background location updates
   useEffect(() => {
+    // store data
     const data: IStoredData = { enabled: enabled, time: time };
     storeData(data);
+
+    // start/stop background location updates
+    (async () => {
+      if (enabled) {
+        startLocationUpdatesAsync();
+      } else {
+        const started = await Location.hasStartedLocationUpdatesAsync(
+          LOCATION_TASK
+        );
+        started && Location.stopLocationUpdatesAsync(LOCATION_TASK);
+      }
+    })();
     schedulePushNotification(enabled, location, time, setRain);
   }, [enabled, time]);
+
+  // schedule notification and reload chart on location change
+  useEffect(() => {
+    schedulePushNotification(enabled, location, time, setRain);
+  }, [location]);
 
   // hide the splash screen once the root view has performed layout
   const onLayoutRootView = useCallback(async () => {
