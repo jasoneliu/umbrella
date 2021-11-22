@@ -36,7 +36,8 @@ const Chart = ({ pop, rain }: { pop: number[]; rain: number[] }) => {
           x: [0, rain.length - 1],
           y: [0, Math.max(0.2, Math.max(...rain))],
         }}
-        height={250}
+        height={200}
+        padding={{ top: 20, bottom: 40, left: 50, right: 50 }}
       >
         <Gradient />
         <VictoryAxis // x axis (time)

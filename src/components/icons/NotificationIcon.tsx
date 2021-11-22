@@ -13,7 +13,7 @@ const NotificationIcon = ({
     <TouchableOpacity onPress={toggle}>
       <MaterialIcons
         name={enabled ? "notifications-active" : "notifications-off"}
-        size={42}
+        size={38}
         color="white"
       />
     </TouchableOpacity>

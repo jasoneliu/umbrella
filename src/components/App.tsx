@@ -143,19 +143,30 @@ const App = () => {
 
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
-      <NotificationIcon enabled={enabled} toggle={toggleEnabled} />
+      <View style={{ paddingBottom: 3 }}>
+        <NotificationIcon enabled={enabled} toggle={toggleEnabled} />
+      </View>
+
       <TouchableOpacity
         style={styles.row}
         onPress={() => setShowTimePicker(true)}
       >
         <ClockIcon />
-        <Text style={styles.text}>{getTime(new Date(time), true)}</Text>
+        <Text style={[styles.text, { paddingLeft: 7 }]}>
+          {getTime(new Date(time), true)}
+        </Text>
       </TouchableOpacity>
+
       <View style={styles.row}>
         <MapIcon />
-        <Text style={styles.text}>{locationText}</Text>
+        <Text style={[styles.text, { paddingHorizontal: 5 }]}>
+          {locationText}
+        </Text>
         <RefreshIcon refresh={refreshLocation} />
       </View>
+
+      <View style={{ height: "10%" }} />
+
       <View>
         <Text style={styles.text}>
           {rain
@@ -165,6 +176,12 @@ const App = () => {
             : "Sorry, couldn't get a rain forecast."}
         </Text>
       </View>
+
+      <Chart
+        pop={rain ? rain.pop : Array(12).fill(0)}
+        rain={rain ? rain.rain : Array(12).fill(0)}
+      />
+
       {showTimePicker && (
         <DateTimePickerModal
           mode="time"
@@ -177,15 +194,13 @@ const App = () => {
           onCancel={() => setShowTimePicker(false)}
         />
       )}
-      <Chart
-        pop={rain ? rain.pop : Array(12).fill(0)}
-        rain={rain ? rain.rain : Array(12).fill(0)}
-      />
+
       <StatusBar style="light" translucent={true} />
     </View>
   );
 };
 
+// styles for app
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -194,13 +209,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   row: {
-    display: "flex",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
   text: {
-    fontSize: 16,
+    fontSize: 18,
     color: "hsl(0, 0%, 100%)",
   },
 });
