@@ -4,9 +4,10 @@ import { Defs, LinearGradient, Stop } from "react-native-svg";
 import { VictoryArea, VictoryAxis, VictoryChart } from "victory-native";
 import getTime from "../api/time";
 
-const Chart = ({ data }: { data: number[] }) => {
+const Chart = ({ pop, rain }: { pop: number[]; rain: number[] }) => {
   // display data for next 8 hours
-  data = data.slice(0, 8);
+  pop = pop.slice(0, 8);
+  rain = rain.slice(0, 8);
 
   // colors
   const blue = "hsl(169, 65%, 70%)";
@@ -17,7 +18,7 @@ const Chart = ({ data }: { data: number[] }) => {
     <Defs key={"gradient"}>
       <LinearGradient id={"gradient"} x1={"0%"} y1={"0%"} x2={"0%"} y2={"100%"}>
         <Stop offset={"0%"} stopColor={blue} stopOpacity={1} />
-        <Stop offset={"100%"} stopColor={blue} stopOpacity={0.4} />
+        <Stop offset={"100%"} stopColor={blue} stopOpacity={0.6} />
       </LinearGradient>
     </Defs>
   );
@@ -27,20 +28,20 @@ const Chart = ({ data }: { data: number[] }) => {
       style={{
         alignItems: "center",
         justifyContent: "center",
-        paddingLeft: 25,
+        paddingLeft: 35,
       }}
     >
       <VictoryChart
         domain={{
-          x: [0, data.length - 1],
-          y: [0, Math.max(0.2, Math.max(...data))],
+          x: [0, rain.length - 1],
+          y: [0, Math.max(0.2, Math.max(...rain))],
         }}
         height={250}
       >
         <Gradient />
-        <VictoryAxis // x axis
+        <VictoryAxis // x axis (time)
           dependentAxis={false}
-          tickValues={data.map((value, index) => index)}
+          tickValues={rain.map((value, index) => index)}
           tickFormat={(index: number) => {
             let time = new Date();
             time.setHours(time.getHours() + index);
@@ -49,7 +50,27 @@ const Chart = ({ data }: { data: number[] }) => {
           style={{
             axis: { stroke: gray },
             grid: { stroke: gray, strokeDasharray: "4 8", strokeWidth: 1 },
-            tickLabels: { fill: gray, fontSize: 10, padding: 5 },
+            tickLabels: {
+              fill: gray,
+              fontSize: 12,
+              padding: 10,
+            },
+          }}
+        />
+        <VictoryAxis // x axis (pop)
+          dependentAxis={false}
+          tickValues={rain.map((value, index) => index)}
+          tickFormat={(index: number) => {
+            return `${(pop[index] * 100).toFixed()}%`;
+          }}
+          style={{
+            axis: { stroke: gray },
+            grid: { stroke: gray, strokeDasharray: "4 8", strokeWidth: 1 },
+            tickLabels: {
+              fill: gray,
+              fontSize: 10,
+              padding: 25,
+            },
           }}
         />
         <VictoryAxis // y axis
@@ -65,13 +86,13 @@ const Chart = ({ data }: { data: number[] }) => {
             },
             tickLabels: {
               fill: blue,
-              fontSize: 10,
+              fontSize: 12,
               padding: 5,
             },
           }}
         />
         <VictoryArea // area chart
-          data={data}
+          data={rain}
           interpolation="monotoneX"
           style={{ data: { fill: "url(#gradient)" } }}
         />
