@@ -37,21 +37,31 @@ const getLocation = async (
     return undefined;
   }
 
-  // get name of location (city, country)
+  // get name of location
   try {
     const response = await fetch(
-      "https://api.openweathermap.org/data/2.5/weather?lat=" +
+      "https://api.openweathermap.org/geo/1.0/reverse?lat=" +
         location.coords.latitude.toFixed(2) +
         "&lon=" +
         location.coords.longitude.toFixed(2) +
+        "&limit=1" +
         "&appid=" +
         OPENWEATHERMAP_API_KEY
     );
+
+    // combine city, state (where availiable), and country
     const data = await response.json();
+    let name = `${data[0].name}, `;
+    const state = data[0].state;
+    if (state) {
+      name += `${state}, `;
+    }
+    name += data[0].country;
+
     return {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
-      name: `${data.name}, ${data.sys.country}`,
+      name: name,
     };
   } catch (error) {
     console.log(error);
