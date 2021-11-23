@@ -7,15 +7,23 @@ interface ILocation {
   name: string;
 }
 
-const getLocation = async (): Promise<ILocation | undefined> => {
-  // request background location permission if missing
+const getLocation = async (
+  setModalVisible?: React.Dispatch<React.SetStateAction<boolean | undefined>>
+): Promise<ILocation | undefined> => {
+  // request foreground location permission if missing
   let { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== "granted") {
     return undefined;
   }
 
-  // TODO: Add modal explaining how background permission is used
+  // show modal explaining background location usage
+  status = (await Location.getBackgroundPermissionsAsync()).status;
+  if (status !== "granted" && setModalVisible !== undefined) {
+    setModalVisible(true);
+    return undefined;
+  }
 
+  // request background location permission if missing
   status = (await Location.requestBackgroundPermissionsAsync()).status;
   if (status !== "granted") {
     return undefined;
@@ -50,7 +58,7 @@ const getLocation = async (): Promise<ILocation | undefined> => {
     return {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
-      name: "",
+      name: "Unable to get location name.",
     };
   }
 };

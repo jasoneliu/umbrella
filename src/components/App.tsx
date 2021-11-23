@@ -7,6 +7,7 @@ import { StatusBar } from "expo-status-bar";
 import * as TaskManager from "expo-task-manager";
 
 import Chart from "./Chart";
+import PermissionModal from "./PermissionModal";
 import ClockIcon from "./icons/ClockIcon";
 import MapIcon from "./icons/MapIcon";
 import NotificationIcon from "./icons/NotificationIcon";
@@ -53,7 +54,9 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
     const newLocation: ILocation = {
       latitude: latitude,
       longitude: longitude,
-      name: fetchedLocation ? fetchedLocation.name : "Unable to get location.",
+      name: fetchedLocation
+        ? fetchedLocation.name
+        : "Unable to get location name.",
     };
     store.dispatch(setLocation(newLocation));
 
@@ -73,7 +76,7 @@ const App = () => {
     locationText = location.name;
   }
   const refreshLocation = async () => {
-    const location = await getLocation();
+    const location = await getLocation(setModalVisible);
     dispatch(setLocation(location));
   };
 
@@ -86,13 +89,18 @@ const App = () => {
 
   // pick time of notification
   const time = useSelector((state: RootState) => state.app.time);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
 
   // rain data (probability of precipitation, rain volume, umbrella)
   const [rain, setRain] = useState<IRain | undefined>(undefined);
 
   // app is ready after initialization, used to hide splash screen
   const [appIsReady, setAppIsReady] = useState(false);
+
+  // show permission modal
+  const [modalVisible, setModalVisible] = useState<boolean | undefined>(
+    undefined
+  );
 
   // initialize app on startup
   useEffect(() => {
@@ -105,7 +113,8 @@ const App = () => {
       }
 
       // get location permissions and set location
-      const location = await getLocation();
+      console.log("modalVisible: " + modalVisible);
+      const location = await getLocation(setModalVisible);
       dispatch(setLocation(location));
 
       // get location in background
@@ -157,6 +166,17 @@ const App = () => {
     schedulePushNotification(enabled, location, time, setRain);
   }, [location]);
 
+  // request background location after user closes modal
+  useEffect(() => {
+    // modal closed, and not on startup
+    if (modalVisible === false) {
+      (async () => {
+        const location = await getLocation();
+        dispatch(setLocation(location));
+      })();
+    }
+  }, [modalVisible]);
+
   // hide the splash screen once the root view has performed layout
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
@@ -176,7 +196,7 @@ const App = () => {
 
       <TouchableOpacity
         style={styles.row}
-        onPress={() => setShowTimePicker(true)}
+        onPress={() => setTimePickerVisible(true)}
       >
         <ClockIcon />
         <Text style={[styles.text, { paddingLeft: 7 }]}>
@@ -209,18 +229,18 @@ const App = () => {
         rain={rain ? rain.rain : Array(12).fill(0)}
       />
 
-      {showTimePicker && (
-        <DateTimePickerModal
-          mode="time"
-          date={new Date(time)}
-          isVisible={showTimePicker}
-          onConfirm={(date) => {
-            setShowTimePicker(false);
-            dispatch(setTime(date.getTime()));
-          }}
-          onCancel={() => setShowTimePicker(false)}
-        />
-      )}
+      <DateTimePickerModal
+        mode="time"
+        date={new Date(time)}
+        isVisible={timePickerVisible}
+        onConfirm={(date) => {
+          setTimePickerVisible(false);
+          dispatch(setTime(date.getTime()));
+        }}
+        onCancel={() => setTimePickerVisible(false)}
+      />
+
+      <PermissionModal visible={modalVisible} setVisible={setModalVisible} />
 
       <StatusBar style="light" translucent={true} />
     </View>
@@ -242,7 +262,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 18,
-    color: "hsl(0, 0%, 100%)",
+    color: "white",
   },
 });
 
