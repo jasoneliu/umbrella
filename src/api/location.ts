@@ -41,9 +41,9 @@ const getLocation = async (
   try {
     const response = await fetch(
       "https://api.openweathermap.org/geo/1.0/reverse?lat=" +
-        location.coords.latitude.toFixed(2) +
+        location.coords.latitude.toFixed(4) +
         "&lon=" +
-        location.coords.longitude.toFixed(2) +
+        location.coords.longitude.toFixed(4) +
         "&limit=1" +
         "&appid=" +
         OPENWEATHERMAP_API_KEY

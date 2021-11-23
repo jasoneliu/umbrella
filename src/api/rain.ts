@@ -45,9 +45,9 @@ const getRain = async (
     // get hourly forecast
     const response = await fetch(
       "https://api.openweathermap.org/data/2.5/onecall?lat=" +
-        location.latitude.toFixed(2) +
+        location.latitude.toFixed(4) +
         "&lon=" +
-        location.longitude.toFixed(2) +
+        location.longitude.toFixed(4) +
         "&exclude=current,minutely,daily,alerts&appid=" +
         OPENWEATHERMAP_API_KEY
     );
