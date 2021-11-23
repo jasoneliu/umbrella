@@ -1,5 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  AppState,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as Linking from "expo-linking";
 import * as Location from "expo-location";
@@ -74,6 +80,17 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
 const App = () => {
   const dispatch = useDispatch<AppDispatch>();
 
+  // disable/enable notifications
+  const enabled = useSelector((state: RootState) => state.app.enabled);
+  const toggleEnabled = () => {
+    schedulePushNotification(!enabled, location, time, setRain);
+    dispatch(setEnabled(!enabled)); // toggle
+  };
+
+  // pick time of notification
+  const time = useSelector((state: RootState) => state.app.time);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
+
   // current location (latitude, longitude, name)
   const location = useSelector((state: RootState) => state.app.location);
   let locationText = "Waiting for location...";
@@ -92,28 +109,29 @@ const App = () => {
     }
   };
 
-  // disable/enable notifications
-  const enabled = useSelector((state: RootState) => state.app.enabled);
-  const toggleEnabled = () => {
-    schedulePushNotification(!enabled, location, time, setRain);
-    dispatch(setEnabled(!enabled)); // toggle
-  };
-
-  // pick time of notification
-  const time = useSelector((state: RootState) => state.app.time);
-  const [timePickerVisible, setTimePickerVisible] = useState(false);
-
   // rain data (probability of precipitation, rain volume, umbrella)
   const [rain, setRain] = useState<IRain | undefined>(undefined);
-
-  // app is ready after initialization, used to hide splash screen
-  const [appIsReady, setAppIsReady] = useState(false);
 
   // show permission modal
   const [modalSettingsFull, setModalSettingsFull] = useState(false);
   const [modalVisible, setModalVisible] = useState<boolean | undefined>(
     undefined
   );
+
+  // app state becomes inactive when user is sent to the settings menu
+  const inSettings = useRef(false);
+  const [appState, setAppState] = useState(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      setAppState(nextAppState);
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // app is ready after initialization, used to hide splash screen
+  const [appIsReady, setAppIsReady] = useState(false);
 
   // initialize app on startup
   useEffect(() => {
@@ -182,12 +200,23 @@ const App = () => {
     // modal closed, and not on startup
     if (modalVisible === false) {
       if (modalSettingsFull) {
+        // open full settings menu
+        inSettings.current = true;
         Linking.openSettings();
       } else {
+        // open location settings menu (to request background location)
         refreshLocation(true);
       }
     }
   }, [modalVisible]);
+
+  // when user returns from full settings menu, refresh location
+  useEffect(() => {
+    if (inSettings.current && appState === "active") {
+      inSettings.current = false;
+      refreshLocation(true);
+    }
+  }, [appState]);
 
   // hide the splash screen once the root view has performed layout
   const onLayoutRootView = useCallback(async () => {
