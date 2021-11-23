@@ -9,7 +9,7 @@ interface ILocation {
 
 const getLocationPermissions = async (
   setModalSettingsFull: React.Dispatch<React.SetStateAction<boolean>>,
-  setModalVisible: React.Dispatch<React.SetStateAction<boolean | undefined>>,
+  setModalVisible: React.Dispatch<React.SetStateAction<boolean>>,
   showModalFull: boolean
 ) => {
   // request foreground location permission if missing

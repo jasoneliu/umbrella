@@ -114,9 +114,7 @@ const App = () => {
 
   // show permission modal
   const [modalSettingsFull, setModalSettingsFull] = useState(false);
-  const [modalVisible, setModalVisible] = useState<boolean | undefined>(
-    undefined
-  );
+  const [modalVisible, setModalVisible] = useState(false);
 
   // app state becomes inactive when user is sent to the settings menu
   const inSettings = useRef(false);
@@ -146,13 +144,13 @@ const App = () => {
       // get location permissions and set location
       await refreshLocation(false);
 
+      // register for push notifications
+      await registerForPushNotificationsAsync();
+
       // get location in background
       if (data?.enabled) {
         await startLocationUpdatesAsync();
       }
-
-      // register for push notifications
-      await registerForPushNotificationsAsync();
 
       // schedule notifications
       if (data) {
@@ -177,17 +175,19 @@ const App = () => {
     storeData(data);
 
     // start/stop background location updates
-    (async () => {
-      if (enabled) {
-        startLocationUpdatesAsync();
-      } else {
-        const started = await Location.hasStartedLocationUpdatesAsync(
-          LOCATION_TASK
-        );
-        started && Location.stopLocationUpdatesAsync(LOCATION_TASK);
-      }
-    })();
-    schedulePushNotification(enabled, location, time, setRain);
+    if (appIsReady) {
+      (async () => {
+        if (enabled) {
+          startLocationUpdatesAsync();
+        } else {
+          const started = await Location.hasStartedLocationUpdatesAsync(
+            LOCATION_TASK
+          );
+          started && Location.stopLocationUpdatesAsync(LOCATION_TASK);
+        }
+      })();
+      schedulePushNotification(enabled, location, time, setRain);
+    }
   }, [enabled, time]);
 
   // schedule notification and reload chart on location change
@@ -198,7 +198,7 @@ const App = () => {
   // request background location after user closes modal
   useEffect(() => {
     // modal closed, and not on startup
-    if (modalVisible === false) {
+    if (!modalVisible && appIsReady) {
       if (modalSettingsFull) {
         // open full settings menu
         inSettings.current = true;

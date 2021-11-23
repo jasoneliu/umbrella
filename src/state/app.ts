@@ -7,7 +7,7 @@ interface IState {
   time: number;
 }
 const initialState: IState = {
-  enabled: false,
+  enabled: true,
   location: undefined,
   time: new Date().setHours(9, 0), // 9 AM
 };

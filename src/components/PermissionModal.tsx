@@ -8,7 +8,7 @@ const PermissionModal = ({
 }: {
   settingsFull: boolean;
   visible: boolean | undefined;
-  setVisible: React.Dispatch<React.SetStateAction<boolean | undefined>>;
+  setVisible: React.Dispatch<React.SetStateAction<boolean>>;
 }) => {
   let modalText = "";
   if (settingsFull) {
@@ -28,7 +28,7 @@ Please click "Allow all the time."';
       <Modal
         animationType="fade"
         transparent={true}
-        visible={!!visible}
+        visible={visible}
         onRequestClose={() => {
           setVisible(false);
         }}
