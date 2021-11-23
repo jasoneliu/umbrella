@@ -7,28 +7,40 @@ interface ILocation {
   name: string;
 }
 
-const getLocation = async (
-  setModalVisible?: React.Dispatch<React.SetStateAction<boolean | undefined>>
-): Promise<ILocation | undefined> => {
+const getLocationPermissions = async (
+  setModalSettingsFull: React.Dispatch<React.SetStateAction<boolean>>,
+  setModalVisible: React.Dispatch<React.SetStateAction<boolean | undefined>>,
+  showModalFull: boolean
+) => {
   // request foreground location permission if missing
+  // show modal explaining location usaged if denied
   let { status } = await Location.requestForegroundPermissionsAsync();
   if (status !== "granted") {
-    return undefined;
+    setModalSettingsFull(true);
+    setModalVisible(true);
+    return false;
   }
 
   // show modal explaining background location usage
   status = (await Location.getBackgroundPermissionsAsync()).status;
-  if (status !== "granted" && setModalVisible !== undefined) {
+  if (status !== "granted" && !showModalFull) {
+    setModalSettingsFull(false);
     setModalVisible(true);
-    return undefined;
+    return false;
   }
 
   // request background location permission if missing
   status = (await Location.requestBackgroundPermissionsAsync()).status;
   if (status !== "granted") {
-    return undefined;
+    setModalSettingsFull(true);
+    setModalVisible(true);
+    return false;
   }
 
+  return true;
+};
+
+const getLocation = async (): Promise<ILocation | undefined> => {
   // get current location
   const location = await Location.getCurrentPositionAsync({
     accuracy: Location.Accuracy.Low, // accurate to the nearest kilometer
@@ -73,4 +85,4 @@ const getLocation = async (
   }
 };
 
-export { ILocation, getLocation };
+export { ILocation, getLocation, getLocationPermissions };

@@ -2,12 +2,27 @@ import React from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const PermissionModal = ({
+  settingsFull,
   visible,
   setVisible,
 }: {
+  settingsFull: boolean;
   visible: boolean | undefined;
   setVisible: React.Dispatch<React.SetStateAction<boolean | undefined>>;
 }) => {
+  let modalText = "";
+  if (settingsFull) {
+    modalText =
+      'This app requires background location access for notifications.\n\n\
+When you click the button below, you will be brought to the settings page.\n\
+Please click Permissions → Location → "Allow all the time."';
+  } else {
+    modalText =
+      'This app requires background location access for notifications.\n\n\
+When you click the button below, you will be brought to the settings page.\n\
+Please click "Allow all the time."';
+  }
+
   return (
     <View style={styles.centeredView}>
       <Modal
@@ -25,13 +40,7 @@ const PermissionModal = ({
           ]}
         >
           <View style={styles.modalView}>
-            <Text style={styles.modalText}>
-              This app requires background location access for notifications.
-              {"\n\n"}
-              When you click the button below, you will be brought to the
-              settings page.{"\n"}
-              Please click "Allow all the time."
-            </Text>
+            <Text style={styles.modalText}>{modalText}</Text>
             <TouchableOpacity
               activeOpacity={0.5}
               style={styles.modalButton}

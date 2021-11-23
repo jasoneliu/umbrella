@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import * as Linking from "expo-linking";
 import * as Location from "expo-location";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -18,7 +19,11 @@ import store, { RootState, AppDispatch } from "../state/store";
 import { setEnabled, setLocation, setTime } from "../state/app";
 
 import { IStoredData, storeData, getData } from "../api/asyncStorage";
-import { ILocation, getLocation } from "../api/location";
+import {
+  ILocation,
+  getLocation,
+  getLocationPermissions,
+} from "../api/location";
 import {
   registerForPushNotificationsAsync,
   schedulePushNotification,
@@ -75,9 +80,16 @@ const App = () => {
   if (location) {
     locationText = location.name;
   }
-  const refreshLocation = async () => {
-    const location = await getLocation(setModalVisible);
-    dispatch(setLocation(location));
+  const refreshLocation = async (showModalFull: boolean) => {
+    const permissions = await getLocationPermissions(
+      setModalSettingsFull,
+      setModalVisible,
+      showModalFull
+    );
+    if (permissions) {
+      const location = await getLocation();
+      location && dispatch(setLocation(location));
+    }
   };
 
   // disable/enable notifications
@@ -98,6 +110,7 @@ const App = () => {
   const [appIsReady, setAppIsReady] = useState(false);
 
   // show permission modal
+  const [modalSettingsFull, setModalSettingsFull] = useState(false);
   const [modalVisible, setModalVisible] = useState<boolean | undefined>(
     undefined
   );
@@ -113,9 +126,7 @@ const App = () => {
       }
 
       // get location permissions and set location
-      console.log("modalVisible: " + modalVisible);
-      const location = await getLocation(setModalVisible);
-      dispatch(setLocation(location));
+      await refreshLocation(false);
 
       // get location in background
       if (data?.enabled) {
@@ -170,10 +181,11 @@ const App = () => {
   useEffect(() => {
     // modal closed, and not on startup
     if (modalVisible === false) {
-      (async () => {
-        const location = await getLocation();
-        dispatch(setLocation(location));
-      })();
+      if (modalSettingsFull) {
+        Linking.openSettings();
+      } else {
+        refreshLocation(true);
+      }
     }
   }, [modalVisible]);
 
@@ -209,7 +221,7 @@ const App = () => {
         <Text style={[styles.text, { paddingHorizontal: 5 }]}>
           {locationText}
         </Text>
-        <RefreshIcon refresh={refreshLocation} />
+        <RefreshIcon refresh={() => refreshLocation(true)} />
       </View>
 
       <View style={{ height: "10%" }} />
@@ -240,7 +252,11 @@ const App = () => {
         onCancel={() => setTimePickerVisible(false)}
       />
 
-      <PermissionModal visible={modalVisible} setVisible={setModalVisible} />
+      <PermissionModal
+        settingsFull={modalSettingsFull}
+        visible={modalVisible}
+        setVisible={setModalVisible}
+      />
 
       <StatusBar style="light" translucent={true} />
     </View>
